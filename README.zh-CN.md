@@ -2,6 +2,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+本插件让 DSH 和 DSH Desktop 可以使用 `codex-chatgpt-web` 提供的 ChatGPT Web 路由。DSH 仍负责会话、文件、终端、工具、审批和沙箱策略；上游 launcher 负责连接 ChatGPT Web 浏览器。
+
 > [!IMPORTANT]
 > **强依赖说明：** 本插件目前必须依赖
 > [codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web)。
@@ -9,8 +11,6 @@
 > `dsh-llm-chatgpt-web` 本身不实现 ChatGPT Web 浏览器传输层。它负责在 DSH / DSH Desktop 与 `codex-chatgpt-web` 之间进行适配。在使用本插件的 ChatGPT Web 模型之前，必须先安装上游 launcher、登录 ChatGPT，并保持 launcher 运行。
 >
 > ChatGPT Web 登录、浏览器传输、模型选择、Responses/SSE、Full harness 和 MCP 等上游能力均由 `codex-chatgpt-web` 提供。本项目不会隐藏或内嵌这项依赖，这不是可选依赖。
-
-本插件让 DSH 和 DSH Desktop 可以使用 `codex-chatgpt-web` 提供的 ChatGPT Web 路由。DSH 仍负责会话、文件、终端、工具、审批和沙箱策略；上游 launcher 负责连接 ChatGPT Web 浏览器。
 
 ## 快速开始
 
