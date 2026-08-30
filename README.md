@@ -83,50 +83,6 @@ Tool calling requires the upstream launcher's Full harness / MCP setup. Follow t
 
 The original upstream HTTP/SSE error is returned to DSH with secrets redacted. The plugin does not retry the request with a different model.
 
-### Windows: `ERR_PNPM_EPERM` after switching from an older local checkout
-
-If this plugin was previously installed from a local directory, Windows/pnpm may leave a Junction in the DSH profile's `node_modules`. A later GitHub install can then fail while renaming a temporary package directory.
-
-Check the installed path:
-
-```powershell
-Get-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web" -Force |
-    Format-List FullName,Attributes,LinkType,Target
-```
-
-If `LinkType` is `Junction` or `SymbolicLink` and the target is your old local checkout, remove only that link:
-
-```powershell
-cmd /c rmdir "%USERPROFILE%\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web"
-```
-
-Then remove any failed-install temporary directories:
-
-```powershell
-Get-ChildItem "$env:USERPROFILE\.dsh\profiles\desktop\node_modules" -Filter "dsh-llm-chatgpt-web_tmp_*" -Force |
-    Remove-Item -Recurse -Force
-```
-
-Retry:
-
-```powershell
-dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
-```
-
-Do not delete the whole DSH lockfile for this specific Junction conflict.
-
-## Configuration
-
-The defaults are normally sufficient:
-
-```yaml
-baseURL: http://127.0.0.1:17841
-networkAccess: false
-```
-
-- `baseURL` is the local `codex-chatgpt-web` bridge address.
-- `networkAccess` describes whether the model turn may use network-capable DSH tools; it does not start or configure the upstream launcher.
-
 ## Source development
 
 Node.js 20 or newer is required for a source build.
