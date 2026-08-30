@@ -5,6 +5,7 @@ import { PROVIDER } from './models.js'
 import type { RuntimeContext } from './types.js'
 
 export { ChatGptWebAdapter } from './adapter.js'
+export { CapabilityCatalog, capabilityConfigPath, readAccountCapabilities, routesForCapabilities } from './capabilities.js'
 export { PROVIDER, ROUTES } from './models.js'
 export { serializeRequest } from './serialize.js'
 
@@ -29,6 +30,6 @@ export function apply(ctx: Context, config: Config): void {
     logger: ctx.logger,
   })
   ;(ctx as any).llm.registerAdapter([PROVIDER], adapter)
-  ctx.logger.info('llm-chatgpt-web: registered provider chatgpt-web with dynamic bridge model discovery')
+  ctx.logger.info('llm-chatgpt-web: registered provider chatgpt-web with account capability discovery')
   void adapter.listModels(PROVIDER)
 }

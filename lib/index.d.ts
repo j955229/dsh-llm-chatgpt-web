@@ -1,6 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';
 export { ChatGptWebAdapter } from './adapter.js';
+export { CapabilityCatalog, capabilityConfigPath, readAccountCapabilities, routesForCapabilities } from './capabilities.js';
 export { PROVIDER, ROUTES } from './models.js';
 export { serializeRequest } from './serialize.js';
 export declare const name = "llm-chatgpt-web";
