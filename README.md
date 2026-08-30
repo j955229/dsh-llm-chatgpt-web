@@ -2,6 +2,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `codex-chatgpt-web`. DSH remains responsible for sessions, files, shell access, tools, approvals, and sandbox policy; the upstream launcher handles the browser connection to ChatGPT Web.
+
 > [!IMPORTANT]
 > **Strong dependency:** This plugin currently requires
 > [codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web).
@@ -9,8 +11,6 @@
 > `dsh-llm-chatgpt-web` does not implement the ChatGPT Web browser transport itself. It is the DSH adapter layer between DSH / DSH Desktop and `codex-chatgpt-web`. The upstream launcher must be installed, signed in, and running before this plugin can use ChatGPT Web models.
 >
 > `codex-chatgpt-web` provides the upstream ChatGPT Web login, browser transport, model selection, Responses/SSE, Full harness, and MCP capabilities. This project does not hide or embed that dependency, and it is not optional.
-
-This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `codex-chatgpt-web`. DSH remains responsible for sessions, files, shell access, tools, approvals, and sandbox policy; the upstream launcher handles the browser connection to ChatGPT Web.
 
 ## Quick start
 
