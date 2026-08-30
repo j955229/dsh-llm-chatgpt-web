@@ -34,8 +34,6 @@ This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `code
 
 4. Select a `ChatGPT Web` model and start a conversation.
 
-No repository clone, `npm install`, local build, Release tarball URL, or manual pnpm `allowBuilds` edit is required for the normal installation path above.
-
 ## Models
 
 The model list comes from the launcher account-capability flags in its local `config.json`; the plugin does not call the bridge's `/v1/models` endpoint.
