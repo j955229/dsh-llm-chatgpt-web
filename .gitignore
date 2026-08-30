@@ -1,0 +1,33 @@
+# Dependencies and package artifacts
+node_modules/
+*.tgz
+coverage/
+.vitest/
+dist/
+
+# Local DSH, browser, and diagnostic state
+.dsh/
+diagnostics/
+sessions/
+session-logs/
+screenshots/
+cookies/
+browser-profile/
+auth.json
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.swp

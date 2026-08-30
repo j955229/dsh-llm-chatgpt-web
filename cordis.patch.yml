@@ -1,0 +1,4 @@
+# DSH bundle patch: load this package's main entry as a normal Host plugin.
+- insert:
+    - id: llm-chatgpt-web
+      name: dsh-llm-chatgpt-web
