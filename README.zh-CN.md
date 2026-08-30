@@ -84,18 +84,6 @@
 
 DSH 会收到上游原始 HTTP/SSE 错误，秘密信息会被遮盖。本插件不会偷偷改用其他模型重试。
 
-## 配置
-
-通常保留默认值即可：
-
-```yaml
-baseURL: http://127.0.0.1:17841
-networkAccess: false
-```
-
-- `baseURL` 是本地 `codex-chatgpt-web` bridge 地址。
-- `networkAccess` 表示本轮模型是否可以使用具备网络能力的 DSH 工具；它不会启动或配置上游 launcher。
-
 ## 源码开发
 
 从源码构建需要 Node.js 20 或更高版本。
