@@ -84,40 +84,6 @@
 
 DSH 会收到上游原始 HTTP/SSE 错误，秘密信息会被遮盖。本插件不会偷偷改用其他模型重试。
 
-### Windows：从旧的本地安装切换到 GitHub 安装时出现 `ERR_PNPM_EPERM`
-
-如果以前曾从本地目录安装过本插件，Windows/pnpm 可能会在 DSH profile 的 `node_modules` 中留下 Junction。之后改用 GitHub 安装时，pnpm 可能会因为目标目录已被这个 Junction 占用而在 rename 阶段报 `EPERM`。
-
-先检查：
-
-```powershell
-Get-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web" -Force |
-    Format-List FullName,Attributes,LinkType,Target
-```
-
-如果 `LinkType` 是 `Junction` 或 `SymbolicLink`，并且 `Target` 指向你以前的本地 checkout，只删除这个链接：
-
-```powershell
-cmd /c rmdir "%USERPROFILE%\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web"
-```
-
-这不会删除 Junction 指向的本地源码目录。
-
-再清理失败安装留下的临时目录：
-
-```powershell
-Get-ChildItem "$env:USERPROFILE\.dsh\profiles\desktop\node_modules" -Filter "dsh-llm-chatgpt-web_tmp_*" -Force |
-    Remove-Item -Recurse -Force
-```
-
-然后重新安装：
-
-```powershell
-dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
-```
-
-针对这种 Junction 冲突，不需要删除整个 DSH lockfile。
-
 ## 配置
 
 通常保留默认值即可：
