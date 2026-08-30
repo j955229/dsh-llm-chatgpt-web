@@ -34,7 +34,6 @@
 
 4. 在模型列表中选择 `ChatGPT Web` 模型，然后开始对话。
 
-正常安装不需要克隆本仓库，不需要执行 `npm install`，不需要本地编译，不需要使用 GitHub Release 的 `.tgz` 直链，也不需要手动修改 pnpm `allowBuilds`。
 
 ## 模型
 
