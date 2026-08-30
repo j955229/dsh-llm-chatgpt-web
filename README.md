@@ -6,25 +6,35 @@
 > **Strong dependency:** This plugin currently requires
 > [codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web).
 >
-> `dsh-llm-chatgpt-web` does not implement the ChatGPT Web browser transport itself. It is the DSH adapter layer between DSH / DSH Desktop and `codex-chatgpt-web`. The upstream launcher must be installed and running before this plugin can use ChatGPT Web models.
+> `dsh-llm-chatgpt-web` does not implement the ChatGPT Web browser transport itself. It is the DSH adapter layer between DSH / DSH Desktop and `codex-chatgpt-web`. The upstream launcher must be installed, signed in, and running before this plugin can use ChatGPT Web models.
 >
-> `codex-chatgpt-web` provides the upstream ChatGPT Web login, browser transport, model selection, Responses/SSE, Full harness, and MCP capabilities. If it is not running, this plugin cannot use ChatGPT Web models. This project does not hide or embed that dependency, and it is not an optional or recommended dependency.
+> `codex-chatgpt-web` provides the upstream ChatGPT Web login, browser transport, model selection, Responses/SSE, Full harness, and MCP capabilities. This project does not hide or embed that dependency, and it is not optional.
 
 This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `codex-chatgpt-web`. DSH remains responsible for sessions, files, shell access, tools, approvals, and sandbox policy; the upstream launcher handles the browser connection to ChatGPT Web.
 
 ## Quick start
 
-1. Install [codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web), sign in to ChatGPT Web, and keep the launcher running. For tool calling, complete the upstream Full harness / MCP setup described by that project.
-2. Open the Terminal built into DSH Desktop and run this one command:
+1. Install [codex-chatgpt-web](https://github.com/miuuyy/codex-chatgpt-web), sign in to ChatGPT Web, and keep the launcher running. For DSH tool calling, complete the upstream Full harness / MCP setup described by that project.
+
+2. Open the **Terminal built into DSH Desktop** and run:
 
    ```powershell
-   dsh plugin add https://github.com/j955229/dsh-llm-chatgpt-web/releases/download/v0.1.0/dsh-llm-chatgpt-web-0.1.0.tgz
+   dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
    ```
 
-   Restart DSH Desktop after the command finishes.
-3. Select a `ChatGPT Web` model in DSH Desktop and start a conversation.
+   The built-in DSH Desktop Terminal already targets the active `desktop` profile, so no extra profile argument is needed.
 
-The Release tarball is prebuilt. Installing it does not require cloning this repository, running `npm install`, running a build, or changing pnpm `allowBuilds` settings.
+   If you are using a normal system terminal instead, use:
+
+   ```powershell
+   dsh plugin --profile desktop add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+   ```
+
+3. Restart DSH Desktop.
+
+4. Select a `ChatGPT Web` model and start a conversation.
+
+No repository clone, `npm install`, local build, Release tarball URL, or manual pnpm `allowBuilds` edit is required for the normal installation path above.
 
 ## Models
 
@@ -46,7 +56,7 @@ The plugin reads:
 - `%CODEX_CHATGPT_WEB_HOME%\config.json` when `CODEX_CHATGPT_WEB_HOME` is set; or
 - `%USERPROFILE%\.codex-chatgpt-web\config.json` otherwise.
 
-Only `solAvailable` and `proAvailable` are used. The launcher config may also contain credentials and other secrets, so do not paste or publish the complete file.
+Only `solAvailable` and `proAvailable` are used. The launcher config may also contain sensitive runtime information, so do not paste or publish the complete file.
 
 ## Troubleshooting
 
@@ -75,9 +85,41 @@ Tool calling requires the upstream launcher's Full harness / MCP setup. Follow t
 
 The original upstream HTTP/SSE error is returned to DSH with secrets redacted. The plugin does not retry the request with a different model.
 
+### Windows: `ERR_PNPM_EPERM` after switching from an older local checkout
+
+If this plugin was previously installed from a local directory, Windows/pnpm may leave a Junction in the DSH profile's `node_modules`. A later GitHub install can then fail while renaming a temporary package directory.
+
+Check the installed path:
+
+```powershell
+Get-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web" -Force |
+    Format-List FullName,Attributes,LinkType,Target
+```
+
+If `LinkType` is `Junction` or `SymbolicLink` and the target is your old local checkout, remove only that link:
+
+```powershell
+cmd /c rmdir "%USERPROFILE%\.dsh\profiles\desktop\node_modules\dsh-llm-chatgpt-web"
+```
+
+Then remove any failed-install temporary directories:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\.dsh\profiles\desktop\node_modules" -Filter "dsh-llm-chatgpt-web_tmp_*" -Force |
+    Remove-Item -Recurse -Force
+```
+
+Retry:
+
+```powershell
+dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+```
+
+Do not delete the whole DSH lockfile for this specific Junction conflict.
+
 ## Configuration
 
-The plugin defaults are normally sufficient:
+The defaults are normally sufficient:
 
 ```yaml
 baseURL: http://127.0.0.1:17841
@@ -99,7 +141,7 @@ npm run check
 npm pack
 ```
 
-`npm run check` compiles the TypeScript and runs the test suite. `npm pack` creates the same kind of prebuilt `.tgz` package used by the GitHub Release. This project is not published to npm.
+`npm run check` compiles the TypeScript and runs the test suite. Source-development steps are not required for normal installation.
 
 ## License
 
