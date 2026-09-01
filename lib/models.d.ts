@@ -32,6 +32,11 @@ export declare const ROUTES: readonly [{
     readonly description: "GPT-5.6 Luna route; only available when the account lacks Sol access.";
 }];
 export type Route = typeof ROUTES[number];
+export interface ModelContextCapabilities {
+    proAvailable: boolean;
+    experimentalBiggerContext?: boolean;
+}
 export declare function routeFor(model: string): Route;
+export declare function routeContextWindow(route: Route, capabilities: ModelContextCapabilities): number;
 export declare function modelInfo(route: Route): LlmModelInfo;
-export declare function resolvedModel(route: Route): LlmResolvedModelInfo;
+export declare function resolvedModel(route: Route, capabilities?: ModelContextCapabilities): LlmResolvedModelInfo;
