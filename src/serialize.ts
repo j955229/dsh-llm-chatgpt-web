@@ -21,7 +21,12 @@ function flattenResult(blocks: readonly DshBlock[]): string {
   }).join('\n')
 }
 
-async function serializeMessage(message: DshMessage, attachments: AttachmentReader, currentTurnId: string | undefined, signal?: AbortSignal): Promise<InputItem[]> {
+async function serializeMessage(
+  message: DshMessage,
+  attachments: AttachmentReader,
+  currentTurnId: string | undefined,
+  signal?: AbortSignal,
+): Promise<InputItem[]> {
   const metadata = currentTurnId ? { internal_chat_message_metadata_passthrough: { turn_id: currentTurnId } } : {}
   if (message.source.kind === 'tool') {
     return message.content.filter((block): block is Extract<DshBlock, { type: 'tool-result' }> => block.type === 'tool-result').map(block => ({
@@ -39,7 +44,14 @@ async function serializeMessage(message: DshMessage, attachments: AttachmentRead
     if (visible.length) result.unshift({ type: 'message', id: message.id, role: 'assistant', content: visible })
     return result
   }
-  const role = message.source.kind === 'plugin' || message.role === 'system' ? 'developer' : 'user'
+  // DSH compaction creates its instruction as a plugin-authored user message. When it is the
+  // current turn user, keep it as user so codex-chatgpt-web can bind native turn identity to it.
+  // Other plugin-authored context remains developer content.
+  const role = currentTurnId && message.role === 'user'
+    ? 'user'
+    : message.source.kind === 'plugin' || message.role === 'system'
+      ? 'developer'
+      : 'user'
   const content: Record<string, unknown>[] = []
   for (const block of message.content) {
     if (block.type === 'text' || block.type === 'reasoning') content.push({ type: 'input_text', text: block.text })
@@ -58,7 +70,7 @@ export interface SerializeOptions {
   temperature?: number
   stop?: string[]
   sessionId: string
-  purpose?: 'session-title'
+  purpose?: 'compaction' | 'session-title'
   signal?: AbortSignal
   environment: TurnEnvironment
   attachments: AttachmentReader
