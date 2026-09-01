@@ -19,7 +19,7 @@
 2. 打开 **DSH Desktop 内置的 Terminal**，执行：
 
    ```powershell
-   dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+   dsh plugin add github:j955229/dsh-llm-chatgpt-web#main
    ```
 
    DSH Desktop 内置 Terminal 已经指向当前 `desktop` profile，所以不需要额外写 profile 参数。
@@ -27,7 +27,7 @@
    如果你是在普通系统终端中执行，则使用：
 
    ```powershell
-   dsh plugin --profile desktop add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+   dsh plugin --profile desktop add github:j955229/dsh-llm-chatgpt-web#main
    ```
 
 3. 重启 DSH Desktop。
@@ -55,7 +55,7 @@
 - 设置了 `CODEX_CHATGPT_WEB_HOME` 时：`%CODEX_CHATGPT_WEB_HOME%\config.json`；
 - 未设置时：`%USERPROFILE%\.codex-chatgpt-web\config.json`。
 
-插件只使用 `solAvailable` 和 `proAvailable`。launcher 配置文件还可能包含敏感运行信息，请不要粘贴或公开完整文件。
+插件使用 `solAvailable`、`proAvailable` 和 `experimentalBiggerContext`。前两项决定可用路由，`experimentalBiggerContext` 用于把上游实际 ChatGPT Web context window 暴露给 DSH 的自动压缩系统。launcher 配置文件还可能包含敏感运行信息，请不要粘贴或公开完整文件。
 
 ## 故障排查
 
