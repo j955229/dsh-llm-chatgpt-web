@@ -19,7 +19,7 @@ This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `code
 2. Open the **Terminal built into DSH Desktop** and run:
 
    ```powershell
-   dsh plugin add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+   dsh plugin add github:j955229/dsh-llm-chatgpt-web#main
    ```
 
    The built-in DSH Desktop Terminal already targets the active `desktop` profile, so no extra profile argument is needed.
@@ -27,7 +27,7 @@ This plugin lets DSH and DSH Desktop use the ChatGPT Web routes exposed by `code
    If you are using a normal system terminal instead, use:
 
    ```powershell
-   dsh plugin --profile desktop add github:j955229/dsh-llm-chatgpt-web#v0.1.0
+   dsh plugin --profile desktop add github:j955229/dsh-llm-chatgpt-web#main
    ```
 
 3. Restart DSH Desktop.
@@ -54,7 +54,7 @@ The plugin reads:
 - `%CODEX_CHATGPT_WEB_HOME%\config.json` when `CODEX_CHATGPT_WEB_HOME` is set; or
 - `%USERPROFILE%\.codex-chatgpt-web\config.json` otherwise.
 
-Only `solAvailable` and `proAvailable` are used. The launcher config may also contain sensitive runtime information, so do not paste or publish the complete file.
+The plugin uses `solAvailable`, `proAvailable`, and `experimentalBiggerContext`. The first two select available routes; `experimentalBiggerContext` lets the adapter expose the upstream ChatGPT Web context window to DSH compaction. The launcher config may also contain sensitive runtime information, so do not paste or publish the complete file.
 
 ## Troubleshooting
 
