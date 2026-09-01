@@ -48,7 +48,14 @@ describe('SSE parser', () => {
   })
   it('preserves a nested SSE terminal failure message and code', async () => {
     const collect = async () => { for await (const _ of responsesToChunks(stream(event({ type: 'response.failed', response: { error: { message: 'ChatGPT response DOM disappeared', code: 'dom_disappeared' } } })))) void _ }
-    await expect(collect()).rejects.toThrow('ChatGPT response DOM disappeared (upstream code: dom_disappeared)')
+    const error = await collect().catch(value => value as Error & { code?: string })
+    expect(error.message).toContain('ChatGPT response DOM disappeared (upstream code: dom_disappeared)')
+    expect(error.code).toBe('dom_disappeared')
+  })
+  it('preserves context_length_exceeded from SSE terminal failures', async () => {
+    const collect = async () => { for await (const _ of responsesToChunks(stream(event({ type: 'response.failed', response: { error: { message: 'Context limit exceeded', code: 'context_length_exceeded' } } })))) void _ }
+    const error = await collect().catch(value => value as Error & { code?: string })
+    expect(error.code).toBe('context_length_exceeded')
   })
   it('redacts secrets from SSE terminal errors', async () => {
     const collect = async () => { for await (const _ of responsesToChunks(stream(event({ type: 'error', error: { message: 'Authorization: Bearer top-secret mcp_turn_token=turn-secret' } })))) void _ }
