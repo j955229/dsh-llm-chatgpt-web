@@ -93,6 +93,20 @@ describe('adapter route validation is independent from discovery', () => {
     expect(error.message).toContain('context_length_exceeded')
   })
 
+  it('maps SSE context overflow to the DSH canonical overflow code', async () => {
+    const data = `data: ${JSON.stringify({
+      type: 'response.failed',
+      response: { error: { message: 'Context limit exceeded', code: 'context_length_exceeded' } },
+    })}\n\n`
+    const fetcher = vi.fn(async () => new Response(data, { headers: { 'content-type': 'text/event-stream' } }))
+    const adapter = new ChatGptWebAdapter({
+      baseURL: 'http://127.0.0.1:17841', networkAccess: false, context, fetch: fetcher,
+      capabilityCatalog: { list: async () => [] },
+    })
+    const error = await collect(adapter, 'chatgpt-web/high').catch(value => value as Error & { code?: string })
+    expect(error.code).toBe(CONTEXT_WINDOW_EXCEEDED_CODE)
+  })
+
   it('allows DSH compaction on an isolated tool-free Web turn', async () => {
     const fetcher = vi.fn(async () => successfulSse())
     const adapter = new ChatGptWebAdapter({
