@@ -15,7 +15,7 @@ export type Route = typeof ROUTES[number]
 
 export interface ModelContextCapabilities {
   proAvailable: boolean
-  experimentalBiggerContext: boolean
+  experimentalBiggerContext?: boolean
 }
 
 // Keep these values aligned with miuuyy/codex-chatgpt-web v4.0.7. They are the
