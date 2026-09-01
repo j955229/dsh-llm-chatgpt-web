@@ -13,16 +13,47 @@ export const ROUTES = [
 
 export type Route = typeof ROUTES[number]
 
+export interface ModelContextCapabilities {
+  proAvailable: boolean
+  experimentalBiggerContext: boolean
+}
+
+// Keep these values aligned with miuuyy/codex-chatgpt-web v4.0.7. They are the
+// browser-route context windows that its own model catalog exposes to Codex.
+const PLUS_INSTANT_CONTEXT_WINDOW = 41_000
+const PLUS_REASONING_CONTEXT_WINDOW = 90_000
+const CHATGPT_WEB_PLATFORM_RESERVE_TOKENS = 8_192
+const PRO_STANDARD_CONTEXT_WINDOW = 103_000 + CHATGPT_WEB_PLATFORM_RESERVE_TOKENS + 1
+const PRO_MODEL_CONTEXT_WINDOW = 104_000 + CHATGPT_WEB_PLATFORM_RESERVE_TOKENS + 1
+const LUNA_CONTEXT_WINDOW = 1_050_000
+const BIGGER_CONTEXT_MULTIPLIER = 3
+
 export function routeFor(model: string): Route {
   const route = ROUTES.find(item => item.id === model)
   if (!route) throw new Error(`Unknown ChatGPT Web model route: ${model}`)
   return route
 }
 
+export function routeContextWindow(route: Route, capabilities: ModelContextCapabilities): number {
+  if (route.id === 'chatgpt-web/luna') return LUNA_CONTEXT_WINDOW
+
+  const baseWindow = capabilities.proAvailable
+    ? route.id === 'chatgpt-web/pro' ? PRO_MODEL_CONTEXT_WINDOW : PRO_STANDARD_CONTEXT_WINDOW
+    : route.id === 'chatgpt-web/light' ? PLUS_INSTANT_CONTEXT_WINDOW : PLUS_REASONING_CONTEXT_WINDOW
+
+  return capabilities.experimentalBiggerContext
+    ? baseWindow * BIGGER_CONTEXT_MULTIPLIER
+    : baseWindow
+}
+
 export function modelInfo(route: Route): LlmModelInfo {
   return { provider: PROVIDER, id: route.id, name: route.name, description: route.description, inputModalities: ['text', 'image'] }
 }
 
-export function resolvedModel(route: Route): LlmResolvedModelInfo {
-  return { ...modelInfo(route), reasoning: { efforts: [{ id: route.effort, name: route.effort }], defaultEffort: route.effort } }
+export function resolvedModel(route: Route, capabilities?: ModelContextCapabilities): LlmResolvedModelInfo {
+  return {
+    ...modelInfo(route),
+    ...(capabilities ? { context: { contextWindow: routeContextWindow(route, capabilities) } } : {}),
+    reasoning: { efforts: [{ id: route.effort, name: route.effort }], defaultEffort: route.effort },
+  }
 }
