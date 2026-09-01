@@ -1,5 +1,6 @@
 import { LlmAdapter } from '@deepseek-ai/dsh-llm';
 import type { GenerateOptions, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm';
+import type { AccountCapabilities } from './capabilities.js';
 import type { Route } from './models.js';
 import type { RuntimeContext } from './types.js';
 export interface AdapterOptions {
@@ -14,6 +15,7 @@ export interface AdapterOptions {
     };
     capabilityCatalog?: {
         list(signal?: AbortSignal): Promise<readonly Route[]>;
+        capabilities?(signal?: AbortSignal): Promise<AccountCapabilities | undefined>;
     };
 }
 export declare class ChatGptWebAdapter extends LlmAdapter {
