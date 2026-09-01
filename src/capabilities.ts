@@ -8,7 +8,7 @@ import { safeDetail } from './upstream-error.js'
 export interface AccountCapabilities {
   solAvailable: boolean
   proAvailable: boolean
-  experimentalBiggerContext: boolean
+  experimentalBiggerContext?: boolean
 }
 
 export interface CapabilityLogger {
