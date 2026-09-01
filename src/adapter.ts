@@ -1,6 +1,13 @@
-import { attributionHeaders, LlmAdapter, LlmError } from '@deepseek-ai/dsh-llm'
+import {
+  attributionHeaders,
+  CONTEXT_WINDOW_EXCEEDED_CODE,
+  isContextWindowExceededError,
+  LlmAdapter,
+  LlmError,
+} from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { CapabilityCatalog } from './capabilities.js'
+import type { AccountCapabilities } from './capabilities.js'
 import { PROVIDER, modelInfo, resolvedModel, routeFor } from './models.js'
 import type { Route } from './models.js'
 import { resolveEnvironment } from './environment.js'
@@ -16,14 +23,29 @@ export interface AdapterOptions {
   context: RuntimeContext
   fetch?: typeof globalThis.fetch
   logger?: { info?(message: string): void; warn?(message: string): void; error?(message: string): void }
-  capabilityCatalog?: { list(signal?: AbortSignal): Promise<readonly Route[]> }
+  capabilityCatalog?: {
+    list(signal?: AbortSignal): Promise<readonly Route[]>
+    capabilities?(signal?: AbortSignal): Promise<AccountCapabilities | undefined>
+  }
 }
 
 function base(value: string): string { return value.replace(/\/+$/, '') }
 
+function upstreamFailureCode(status: number, failure: { message: string; code?: string }): string {
+  const detail = [failure.code, failure.message].filter(Boolean).join(' ')
+  if (failure.code === 'context_length_exceeded' || isContextWindowExceededError(detail)) {
+    return CONTEXT_WINDOW_EXCEEDED_CODE
+  }
+  return `HTTP_${status}`
+}
+
 export class ChatGptWebAdapter extends LlmAdapter {
   private readonly fetchImpl: typeof globalThis.fetch
-  private readonly catalog: { list(signal?: AbortSignal): Promise<readonly Route[]> }
+  private readonly catalog: {
+    list(signal?: AbortSignal): Promise<readonly Route[]>
+    capabilities?(signal?: AbortSignal): Promise<AccountCapabilities | undefined>
+  }
+
   constructor(private readonly options: AdapterOptions) {
     super()
     this.fetchImpl = options.fetch ?? globalThis.fetch
@@ -41,11 +63,17 @@ export class ChatGptWebAdapter extends LlmAdapter {
   override async resolveModel(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo> {
     if (provider !== PROVIDER) return Promise.reject(new LlmError(`Unsupported provider: ${provider}`, 'UNSUPPORTED_PROVIDER'))
     signal?.throwIfAborted()
-    try { return resolvedModel(routeFor(model)) }
+
+    let route: Route
+    try { route = routeFor(model) }
     catch (cause) {
       if (signal?.aborted) throw signal.reason
       throw new LlmError(safeDetail(cause), 'UNKNOWN_MODEL', { cause: safeCause(cause) })
     }
+
+    const capabilities = await this.catalog.capabilities?.(signal)
+    signal?.throwIfAborted()
+    return resolvedModel(route, capabilities)
   }
 
   private async assertToolMode(signal?: AbortSignal): Promise<void> {
@@ -61,14 +89,19 @@ export class ChatGptWebAdapter extends LlmAdapter {
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     options.signal?.throwIfAborted()
-    if (options.purpose === 'compaction') throw new LlmError('ChatGPT Web adapter 不支援 DSH compaction 請求；避免把壓縮回合混入正常 ChatGPT thread。', 'UNSUPPORTED_PURPOSE')
     if (!options.sessionId) throw new LlmError('ChatGPT Web adapter requires options.sessionId.', 'MISSING_SESSION_ID')
     try { routeFor(options.model) }
     catch (cause) {
       if (options.signal?.aborted) throw options.signal.reason
       throw new LlmError(safeDetail(cause), 'UNKNOWN_MODEL', { cause: safeCause(cause) })
     }
-    if (options.tools?.length) await this.assertToolMode(options.signal)
+
+    // DSH compaction is a separate summarization turn. It deliberately carries no tools and uses
+    // a distinct native thread scope in serializeRequest(), so it cannot contaminate the active
+    // ChatGPT Web conversation or invoke work tools while producing a checkpoint.
+    const compaction = options.purpose === 'compaction'
+    if (!compaction && options.tools?.length) await this.assertToolMode(options.signal)
+
     const environment = resolveEnvironment(this.options.context, String(options.sessionId), this.options.networkAccess)
     let native
     try {
@@ -76,12 +109,12 @@ export class ChatGptWebAdapter extends LlmAdapter {
         model: options.model,
         messages: options.messages as DshMessage[],
         ...(options.system ? { system: options.system } : {}),
-        ...(options.tools ? { tools: options.tools } : {}),
+        ...(!compaction && options.tools ? { tools: options.tools } : {}),
         ...(options.maxTokens !== undefined ? { maxTokens: options.maxTokens } : {}),
         ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
         ...(options.stop ? { stop: options.stop } : {}),
         sessionId: String(options.sessionId),
-        ...(options.purpose === 'session-title' ? { purpose: options.purpose } : {}),
+        ...(options.purpose ? { purpose: options.purpose } : {}),
         signal: options.signal,
         environment,
         attachments: this.options.context.attachments,
@@ -89,6 +122,7 @@ export class ChatGptWebAdapter extends LlmAdapter {
     } catch (cause) {
       throw new LlmError('無法建立原生 ChatGPT Web Responses 請求。', 'REQUEST_SERIALIZATION', { cause: safeCause(cause) })
     }
+
     let response: Response
     try {
       response = await this.fetchImpl(`${base(this.options.baseURL)}/v1/responses`, {
@@ -100,13 +134,19 @@ export class ChatGptWebAdapter extends LlmAdapter {
       if (options.signal?.aborted) throw options.signal.reason
       throw new LlmError(`無法連線到 codex-chatgpt-web bridge（預設 127.0.0.1:17841）：${safeDetail(cause)}`, 'UPSTREAM_OFFLINE', { cause: safeCause(cause) })
     }
+
     if (!response.ok) {
       const failure = await describeHttpFailure(response)
-      throw new LlmError(`codex-chatgpt-web request failed: ${formatUpstreamFailure(failure)}`, `HTTP_${response.status}`)
+      throw new LlmError(
+        `codex-chatgpt-web request failed: ${formatUpstreamFailure(failure)}`,
+        upstreamFailureCode(response.status, failure),
+        { status: response.status },
+      )
     }
     if (!response.body || !response.headers.get('content-type')?.toLowerCase().includes('text/event-stream')) {
       throw new LlmError('codex-chatgpt-web did not return an SSE stream.', 'INVALID_RESPONSE')
     }
+
     try {
       for await (const chunk of responsesToChunks(response.body, options.signal)) yield chunk as StreamChunk
     } catch (cause) {
