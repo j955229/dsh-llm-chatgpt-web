@@ -8,6 +8,7 @@ import { safeDetail } from './upstream-error.js'
 export interface AccountCapabilities {
   solAvailable: boolean
   proAvailable: boolean
+  experimentalBiggerContext: boolean
 }
 
 export interface CapabilityLogger {
@@ -83,7 +84,14 @@ export async function readAccountCapabilities(
   if (typeof config.solAvailable !== 'boolean' || typeof config.proAvailable !== 'boolean') {
     throw new CapabilityDiscoveryError(`codex-chatgpt-web config at ${configPath} must contain boolean solAvailable and proAvailable fields.`)
   }
-  const capabilities = { solAvailable: config.solAvailable, proAvailable: config.proAvailable }
+  if (config.experimentalBiggerContext !== undefined && typeof config.experimentalBiggerContext !== 'boolean') {
+    throw new CapabilityDiscoveryError(`codex-chatgpt-web config at ${configPath} must contain a boolean experimentalBiggerContext field when present.`)
+  }
+  const capabilities = {
+    solAvailable: config.solAvailable,
+    proAvailable: config.proAvailable,
+    experimentalBiggerContext: config.experimentalBiggerContext === true,
+  }
   routesForCapabilities(capabilities)
   return capabilities
 }
@@ -97,18 +105,25 @@ export class CapabilityCatalog {
     this.readText = options.readText ?? (path => readFile(path, 'utf8'))
   }
 
-  async list(signal?: AbortSignal): Promise<readonly Route[]> {
+  async capabilities(signal?: AbortSignal): Promise<AccountCapabilities | undefined> {
     signal?.throwIfAborted()
     try {
-      const routes = routesForCapabilities(await readAccountCapabilities(this.configPath, this.readText))
+      const capabilities = await readAccountCapabilities(this.configPath, this.readText)
       signal?.throwIfAborted()
-      this.options.logger?.info?.(`llm-chatgpt-web: discovered ${routes.length} model route(s) from account capabilities`)
-      return routes
+      return capabilities
     } catch (cause) {
       if (signal?.aborted) throw signal.reason
       const message = cause instanceof CapabilityDiscoveryError ? cause.message : 'Unexpected account capability discovery failure.'
       this.options.logger?.warn?.(`llm-chatgpt-web: account capability discovery failed closed: ${message}`)
-      return []
+      return undefined
     }
+  }
+
+  async list(signal?: AbortSignal): Promise<readonly Route[]> {
+    const capabilities = await this.capabilities(signal)
+    if (!capabilities) return []
+    const routes = routesForCapabilities(capabilities)
+    this.options.logger?.info?.(`llm-chatgpt-web: discovered ${routes.length} model route(s) from account capabilities`)
+    return routes
   }
 }
