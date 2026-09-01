@@ -17,9 +17,16 @@ export function latestRealUserIndex(messages: readonly DshMessage[]): number {
   return -1
 }
 
+function latestUserIndex(messages: readonly DshMessage[]): number {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (messages[index]!.role === 'user') return index
+  }
+  return -1
+}
+
 export function stableTurnIdentity(sessionId: string, messages: readonly DshMessage[], purpose?: string): { threadId: string; turnId: string; userIndex: number } {
-  const userIndex = latestRealUserIndex(messages)
-  if (userIndex < 0) throw new Error('A ChatGPT Web turn requires a genuine DSH user message.')
+  const userIndex = purpose === 'compaction' ? latestUserIndex(messages) : latestRealUserIndex(messages)
+  if (userIndex < 0) throw new Error('A ChatGPT Web turn requires a DSH user message.')
   const message = messages[userIndex]!
   const scope = purpose ?? 'conversation'
   const threadId = uuidFrom(`dsh-chatgpt-web\0${scope}\0${sessionId}`)

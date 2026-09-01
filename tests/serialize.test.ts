@@ -63,5 +63,28 @@ describe('native request serialization', () => {
     const second = await serializeRequest(base([message([{ type: 'text', text: 'x' }]), { id: 'r', role: 'user', source: { kind: 'tool' }, content: [] }]))
     expect(second.turnId).toBe(first.turnId)
   })
+  it('uses a separate compaction thread and binds the plugin-authored checkpoint instruction as user', async () => {
+    const ordinary = await serializeRequest(base([message([{ type: 'text', text: 'question' }])]))
+    const messages: any[] = [
+      message([{ type: 'text', text: 'question' }]),
+      { id: 'a1', role: 'assistant', source: { kind: 'model' }, content: [{ type: 'text', text: 'answer' }] },
+      {
+        id: 'compact-1',
+        role: 'user',
+        source: { kind: 'plugin', plugin: 'dsh-compaction-basic' },
+        content: [{ type: 'text', text: 'Create checkpoint' }],
+      },
+    ]
+    const compact = await serializeRequest({ ...base(messages), purpose: 'compaction' })
+    expect(compact.threadId).not.toBe(ordinary.threadId)
+
+    const input = compact.body.input as any[]
+    const compactIndex = input.findIndex(item => item.role === 'user' && item.content?.[0]?.text === 'Create checkpoint')
+    expect(compactIndex).toBeGreaterThan(0)
+    expect(input[compactIndex - 1].content[0].text).toContain('<environment_context>')
+    expect(input[compactIndex].internal_chat_message_metadata_passthrough).toEqual(
+      input[compactIndex - 1].internal_chat_message_metadata_passthrough,
+    )
+  })
   it('rejects unknown routes', async () => await expect(serializeRequest({ ...base([message([{ type: 'text', text: 'x' }])]), model: 'bad' })).rejects.toThrow(/Unknown/))
 })

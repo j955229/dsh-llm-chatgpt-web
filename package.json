@@ -1,6 +1,6 @@
 {
   "name": "dsh-llm-chatgpt-web",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH LLM provider adapter for the local codex-chatgpt-web bridge",
   "author": "j955229",
   "repository": {

@@ -12,7 +12,7 @@ export interface SerializeOptions {
     temperature?: number;
     stop?: string[];
     sessionId: string;
-    purpose?: 'session-title';
+    purpose?: 'compaction' | 'session-title';
     signal?: AbortSignal;
     environment: TurnEnvironment;
     attachments: AttachmentReader;

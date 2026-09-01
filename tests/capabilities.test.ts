@@ -36,9 +36,38 @@ describe('account capability discovery', () => {
     expect(capabilityConfigPath({}, 'C:\\Users\\test')).toBe('C:\\Users\\test\\.codex-chatgpt-web\\config.json')
   })
 
+  it('reads Bigger Context and defaults it off for older configs', async () => {
+    const enabled = await temporaryConfig(JSON.stringify({
+      solAvailable: true,
+      proAvailable: false,
+      experimentalBiggerContext: true,
+    }))
+    expect(await readAccountCapabilities(enabled)).toEqual({
+      solAvailable: true,
+      proAvailable: false,
+      experimentalBiggerContext: true,
+    })
+
+    const legacy = await temporaryConfig(JSON.stringify({ solAvailable: true, proAvailable: false }))
+    expect(await readAccountCapabilities(legacy)).toEqual({
+      solAvailable: true,
+      proAvailable: false,
+      experimentalBiggerContext: false,
+    })
+  })
+
+  it('fails closed when Bigger Context is not a boolean', async () => {
+    const path = await temporaryConfig(JSON.stringify({
+      solAvailable: true,
+      proAvailable: false,
+      experimentalBiggerContext: 'yes',
+    }))
+    expect(await new CapabilityCatalog({ configPath: path }).list()).toEqual([])
+  })
+
   it('fails closed when the config is missing', async () => {
     const messages: string[] = []
-    const catalog = new CapabilityCatalog({ configPath: join(tmpdir(), 'definitely-missing-chatgpt-web-config.json'), logger: { warn: message => messages.push(message) } })
+    const catalog = new CapabilityCatalog({ configPath: join(tmpdir(), 'definitely-missing-dsh-chatgpt-web-config.json'), logger: { warn: message => messages.push(message) } })
     expect(await catalog.list()).toEqual([])
     expect(messages.join('\n')).toContain('failed closed')
   })

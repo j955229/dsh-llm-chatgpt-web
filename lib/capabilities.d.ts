@@ -2,6 +2,7 @@ import type { Route } from './models.js';
 export interface AccountCapabilities {
     solAvailable: boolean;
     proAvailable: boolean;
+    experimentalBiggerContext?: boolean;
 }
 export interface CapabilityLogger {
     info?(message: string): void;
@@ -27,5 +28,6 @@ export declare class CapabilityCatalog {
     private readonly configPath;
     private readonly readText;
     constructor(options?: CapabilityCatalogOptions);
+    capabilities(signal?: AbortSignal): Promise<AccountCapabilities | undefined>;
     list(signal?: AbortSignal): Promise<readonly Route[]>;
 }

@@ -3,6 +3,15 @@ import { extractUpstreamFailure, formatUpstreamFailure, malformedSseMessage } fr
 
 export interface SseRecord { event?: string; data: string }
 
+export class UpstreamSseError extends Error {
+  readonly code?: string
+  constructor(failure: { message: string; code?: string }) {
+    super(formatUpstreamFailure(failure))
+    this.name = 'UpstreamSseError'
+    if (failure.code) this.code = failure.code
+  }
+}
+
 export async function* decodeSse(stream: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncGenerator<SseRecord> {
   const reader = stream.getReader()
   const cancel = (): void => { void reader.cancel(signal?.reason).catch(() => {}) }
@@ -160,7 +169,7 @@ export async function* responsesToChunks(stream: ReadableStream<Uint8Array>, sig
       yield { type: 'finish', reason: { kind: 'max-tokens' }, replayState: { response: { id: value.response?.id, status: 'incomplete' } } }
       terminal = true
     } else if (type === 'error' || type === 'response.failed') {
-      throw new Error(formatUpstreamFailure(extractUpstreamFailure(value)))
+      throw new UpstreamSseError(extractUpstreamFailure(value))
     }
   }
   if (!terminal) throw new Error('ChatGPT Web SSE stream ended before a terminal response event.')
