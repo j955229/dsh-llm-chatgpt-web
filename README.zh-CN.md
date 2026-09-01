@@ -84,6 +84,17 @@
 
 DSH 会收到上游原始 HTTP/SSE 错误，秘密信息会被遮盖。本插件不会偷偷改用其他模型重试。
 
+
+### 上下文压缩
+
+插件会按照 `codex-chatgpt-web` v4.0.7 的实际 Web 路由窗口向 DSH 声明 `contextWindow`，并读取 launcher 的 `experimentalBiggerContext` 开关。例如 Plus 账号的 Medium / High 在 Bigger Context 开启时声明 270,000 tokens，因此 DSH 的 `dsh-compaction-basic` 可以在自己的压力阈值到达时主动压缩。
+
+若上游仍返回 `context_length_exceeded`，无论错误来自 HTTP preflight 还是 SSE `response.failed`，插件都会转换为 DSH 标准的 `CONTEXT_WINDOW_EXCEEDED`，使 overflow recovery 可以执行压缩并重试。
+
+DSH 发出的 `purpose: compaction` 摘要请求使用独立的 ChatGPT Web thread scope，并且不携带工作工具，避免摘要回合污染正常会话或误调用工具。
+
+已经远超上游硬上限的旧会话可能仍无法自动救回：如果待摘要区域本身也超过 Web transport ceiling，摘要请求自己也会被拒绝。新会话会因为正确的 `contextWindow` 提前触发主动压缩。
+
 ## 源码开发
 
 从源码构建需要 Node.js 20 或更高版本。
