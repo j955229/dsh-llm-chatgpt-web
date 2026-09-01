@@ -12,7 +12,7 @@ import { PROVIDER, modelInfo, resolvedModel, routeFor } from './models.js'
 import type { Route } from './models.js'
 import { resolveEnvironment } from './environment.js'
 import { serializeRequest } from './serialize.js'
-import { responsesToChunks } from './sse.js'
+import { responsesToChunks, UpstreamSseError } from './sse.js'
 import { readBridgeHealth, toolModeProblem } from './health.js'
 import type { DshMessage, RuntimeContext } from './types.js'
 import { describeHttpFailure, formatUpstreamFailure, safeCause, safeDetail } from './upstream-error.js'
@@ -31,12 +31,13 @@ export interface AdapterOptions {
 
 function base(value: string): string { return value.replace(/\/+$/, '') }
 
-function upstreamFailureCode(status: number, failure: { message: string; code?: string }): string {
+function isContextOverflowFailure(failure: { message: string; code?: string }): boolean {
   const detail = [failure.code, failure.message].filter(Boolean).join(' ')
-  if (failure.code === 'context_length_exceeded' || isContextWindowExceededError(detail)) {
-    return CONTEXT_WINDOW_EXCEEDED_CODE
-  }
-  return `HTTP_${status}`
+  return failure.code === 'context_length_exceeded' || isContextWindowExceededError(detail)
+}
+
+function upstreamFailureCode(status: number, failure: { message: string; code?: string }): string {
+  return isContextOverflowFailure(failure) ? CONTEXT_WINDOW_EXCEEDED_CODE : `HTTP_${status}`
 }
 
 export class ChatGptWebAdapter extends LlmAdapter {
@@ -151,7 +152,15 @@ export class ChatGptWebAdapter extends LlmAdapter {
       for await (const chunk of responsesToChunks(response.body, options.signal)) yield chunk as StreamChunk
     } catch (cause) {
       if (options.signal?.aborted) throw options.signal.reason
-      throw new LlmError(`codex-chatgpt-web:\n${safeDetail(cause)}`, 'STREAM_ERROR', { cause: safeCause(cause) })
+      const message = safeDetail(cause)
+      const failure = cause instanceof UpstreamSseError && cause.code
+        ? { message, code: cause.code }
+        : { message }
+      throw new LlmError(
+        `codex-chatgpt-web:\n${message}`,
+        isContextOverflowFailure(failure) ? CONTEXT_WINDOW_EXCEEDED_CODE : 'STREAM_ERROR',
+        { cause: safeCause(cause) },
+      )
     }
   }
 }
