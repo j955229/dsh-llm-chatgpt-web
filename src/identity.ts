@@ -14,6 +14,15 @@ export function latestRealUserIndex(messages: readonly DshMessage[]): number {
     const message = messages[index]!
     if (message.role === 'user' && message.source?.kind === 'user') return index
   }
+
+  // DSH Tavern background/subagent turns can be authored by a plugin instead of a human user.
+  // Prefer the latest plugin-authored user message as a fallback, while deliberately ignoring
+  // tool results, skill-catalog injections, and other synthetic user-role messages.
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index]!
+    if (message.role === 'user' && message.source?.kind === 'plugin') return index
+  }
+
   return -1
 }
 
@@ -26,7 +35,7 @@ function latestUserIndex(messages: readonly DshMessage[]): number {
 
 export function stableTurnIdentity(sessionId: string, messages: readonly DshMessage[], purpose?: string): { threadId: string; turnId: string; userIndex: number } {
   const userIndex = purpose === 'compaction' ? latestUserIndex(messages) : latestRealUserIndex(messages)
-  if (userIndex < 0) throw new Error('A ChatGPT Web turn requires a DSH user message.')
+  if (userIndex < 0) throw new Error('A ChatGPT Web turn requires a DSH user or plugin-authored user message.')
   const message = messages[userIndex]!
   const scope = purpose ?? 'conversation'
   const threadId = uuidFrom(`dsh-chatgpt-web\0${scope}\0${sessionId}`)
